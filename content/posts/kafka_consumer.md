@@ -15,25 +15,25 @@ categories:
 
 ## 一、Consumer的线程安全性
 
-KafkaProducer是线程安全的，但Consumer却没有设计成线程安全的。当用户想要在在多线程环境下使用kafkaConsumer时，需要自己来保证synchronized。
+&emsp;&emsp;KafkaProducer是线程安全的，但Consumer却没有设计成线程安全的。当用户想要在在多线程环境下使用kafkaConsumer时，需要自己来保证synchronized。
 
-当你想要关闭Consumer或者为也其它的目的想要中断Consumer的处理时，可以调用consumer的wakeup方法。这个方法会抛出WakeupException。
+&emsp;&emsp;当你想要关闭Consumer或者为也其它的目的想要中断Consumer的处理时，可以调用consumer的wakeup方法。这个方法会抛出WakeupException。
 
 ## 二、Consumer 消费方式
 
-Consumer读取partition中的数据是通过client端主动调用发起一个fetch请求来执行的。
+&emsp;&emsp;Consumer读取partition中的数据是通过client端主动调用发起一个fetch请求来执行的。
 
-而从KafkaConsumer来看，它有一个**poll**方法。但是这个poll方法只是可能会发起fetch请求。
+&emsp;&emsp;而从KafkaConsumer来看，它有一个**poll**方法。但是这个poll方法只是可能会发起fetch请求。
 
-原因是：Consumer每次发起fetch请求时，读取到的数据是有限制的，通过配置项max.partition.fetch.bytes来限制的。而在执行poll方法时，会根据配置项个max.poll.records来限制一次最多pool多少个record。
+&emsp;&emsp;原因是：Consumer每次发起fetch请求时，读取到的数据是有限制的，通过配置项max.partition.fetch.bytes来限制的。而在执行poll方法时，会根据配置项个max.poll.records来限制一次最多pool多少个record。
 
-那么就可能出现这样的情况： 在满足max.partition.fetch.bytes限制的情况下，假如fetch到了100个record，放到本地缓存后，由于max.poll.records限制每次只能poll出15个record。那么KafkaConsumer就需要执行7次才能将这一次通过网络发起的fetch请求所fetch到的这100个record消费完毕。其中前6次是每次poll15个record，最后一次是poll出10个record。
+&emsp;&emsp;那么就可能出现这样的情况： 在满足max.partition.fetch.bytes限制的情况下，假如fetch到了100个record，放到本地缓存后，由于max.poll.records限制每次只能poll出15个record。那么KafkaConsumer就需要执行7次才能将这一次通过网络发起的fetch请求所fetch到的这100个record消费完毕。其中前6次是每次poll15个record，最后一次是poll出10个record。
 
 
 
 ## 三、Consumer Offset Commit
 
-​		由于Kafka消费方式是由client端主动拉取，所以当使用完poll从本地缓存拉取到数据之后，client端要调用commitSync方法（或者commitAsync方法）去commit 下一次该去读取 哪一个offset的message。而这个commit方法会通过走网络的commit请求将offset在coordinator中保留，这样就能够保证下一次读取，既不会重复消费消息，也不会遗漏消息。
+&emsp;&emsp;由于Kafka消费方式是由client端主动拉取，所以当使用完poll从本地缓存拉取到数据之后，client端要调用commitSync方法（或者commitAsync方法）去commit 下一次该去读取 哪一个offset的message。而这个commit方法会通过走网络的commit请求将offset在coordinator中保留，这样就能够保证下一次读取，既不会重复消费消息，也不会遗漏消息。
 
 Kafka Consumer Java Client支持两种模式：
 
@@ -93,110 +93,106 @@ Kafka Consumer Java Client支持两种模式：
 
 ## 四、Consumer Configuration
 
-- **bootstrap.servers**
+<table><tr><td bgcolor=gray><big>bootstrap.servers</big></td></tr></table>
 
-  在启动consumer时配置的broker地址的。不需要将cluster中所有的broker都配置上，因为启动后会自动的发现cluster所有的broker。
+&emsp;&emsp;在启动consumer时配置的broker地址的。不需要将cluster中所有的broker都配置上，因为启动后会自动的发现cluster所有的broker。配置的格式是：host1:port1;host2:port2…
 
-  配置的格式是：host1:port1;host2:port2…
+<table><tr><td bgcolor=gray><big>key.descrializer、value.descrializer</big></td></tr></table>
 
-- **key.descrializer**、**value.descrializer**
+Message record 的key, value的反序列化类。有内置的 **StringDeserializer**，也可自定义。
 
-  Message record 的key, value的反序列化类。有内置的 **StringDeserializer**，也可自定义。
+<table><tr><td bgcolor=gray><big>group.id</big></td></tr></table>
 
-- **group.id**
+用于表示该consumer想要加入到哪个group中。
 
-  用于表示该consumer想要加入到哪个group中。
+<table><tr><td bgcolor=gray><big>heartbeat.interval.ms</big></td></tr></table>
 
-- **heartbeat.interval.ms**
+&emsp;&emsp;心跳间隔。心跳是在consumer与coordinator之间进行的。心跳是确定consumer存活，加入或者退出group的有效手段。
 
-  ​		心跳间隔。心跳是在consumer与coordinator之间进行的。心跳是确定consumer存活，加入或者退出group的有效手段。
+&emsp;&emsp;这个值必须设置的小于session.timeout.ms，因为当Consumer由于某种原因不能发Heartbeat到coordinator时，并且时间超过session.timeout.ms时，就会认为该consumer已退出，它所订阅的partition会分配到同一group 内的其它的consumer上。
 
-  ​		这个值必须设置的小于session.timeout.ms，因为当Consumer由于某种原因不能发Heartbeat到coordinator时，并且时间超过session.timeout.ms时，就会认为该consumer已退出，它所订阅的partition会分配到同一group 内的其它的consumer上。
+&emsp;&emsp;通常设置的值要低于session.timeout.ms的1/3。默认值是：3000 （3s）
 
-  通常设置的值要低于session.timeout.ms的1/3。默认值是：3000 （3s）
+<table><tr><td bgcolor=gray><big>session.timeout.ms</big></td></tr></table>
 
-- **session.timeout.ms**
+&emsp;&emsp;Consumer session 过期时间。这个值必须设置在broker configuration中的group.min.session.timeout.ms 与 group.max.session.timeout.ms之间。其默认值是：10000 （10 s） 
 
-  Consumer session 过期时间。这个值必须设置在broker configuration中的group.min.session.timeout.ms 与 group.max.session.timeout.ms之间。其默认值是：10000 （10 s） 
+<table><tr><td bgcolor=gray><big>enable.auto.commit</big></td></tr></table>
 
-- **enable.auto.commit**
+&emsp;&emsp;Consumer 在commit offset时有两种模式：自动提交(true)，手动提交(false)。更多详情可参考 **三、Consumer Offset Commit** , 默认值是true。
 
-  Consumer 在commit offset时有两种模式：自动提交(true)，手动提交(false)。更多详情可参考 **三、Consumer Offset Commit** , 默认值是true。
+<table><tr><td bgcolor=gray><big>auto.commit.interval.ms</big></td></tr></table>
 
-- **auto.commit.interval.ms**
+自动提交间隔。范围：[0,Integer.MAX]，默认值是 5000 （5 s）
 
-    自动提交间隔。范围：[0,Integer.MAX]，默认值是 5000 （5 s）
+<table><tr><td bgcolor=gray><big>auto.offset.reset</big></td></tr></table>
 
-- **auto.offset.reset**
+&emsp;&emsp;这个配置项，是告诉Kafka Broker在发现kafka在没有初始offset，或者当前的offset是一个不存在的值（如果一个record被删除，就肯定不存在了）时，该如何处理。它有4种处理方式(**默认值是latest**)：
 
-    这个配置项，是告诉Kafka Broker在发现kafka在没有初始offset，或者当前的offset是一个不存在的值（如果一个record被删除，就肯定不存在了）时，该如何处理。它有4种处理方式(**默认值是latest**)：
+​	1） earliest：自动重置到最早的offset。
 
-  ​	1） earliest：自动重置到最早的offset。
+​	2） latest：看上去重置到最晚的offset。
 
-  ​	2） latest：看上去重置到最晚的offset。
+​	3） none：如果边更早的offset也没有的话，就抛出异常给consumer，告诉consumer在整个consumer group中都没有发现有这样的offset。
 
-  ​	3） none：如果边更早的offset也没有的话，就抛出异常给consumer，告诉consumer在整个consumer group中都没有发现有这样的offset。
+​	4） 如果不是上述3种，只抛出异常给consumer。 
 
-  ​	4） 如果不是上述3种，只抛出异常给consumer。 
+<table><tr><td bgcolor=gray><big>connections.max.idle.ms</big></td></tr></table>
 
-- **connections.max.idle.ms**
+&emsp;&emsp;连接空闲超时时间。因为consumer只与broker有连接（coordinator也是一个broker），所以这个配置的是consumer到broker之间的。默认值是：540000 (9 min)
 
-  连接空闲超时时间。因为consumer只与broker有连接（coordinator也是一个broker），所以这个配置的是consumer到broker之间的。默认值是：540000 (9 min)
+<table><tr><td bgcolor=gray><big>fetch.max.wait.ms</big></td></tr></table>
 
-- **fetch.max.wait.ms**
+&emsp;&emsp;Fetch请求发给broker后，在broker中可能会被阻塞的（当topic中records的总size小于fetch.min.bytes时），此时这个fetch请求耗时就会比较长。这个配置就是来配置consumer最多等待response多久。 
 
-  Fetch请求发给broker后，在broker中可能会被阻塞的（当topic中records的总size小于fetch.min.bytes时），此时这个fetch请求耗时就会比较长。这个配置就是来配置consumer最多等待response多久。 
+<table><tr><td bgcolor=gray><big>fetch.min.bytes</big></td></tr></table>
 
-- **fetch.min.bytes**
+&emsp;&emsp;当consumer向一个broker发起fetch请求时，broker返回的records的大小最小值。如果broker中数据量不够的话会wait，直到数据大小满足这个条件。取值范围是：[0, Integer.Max]，默认值是1。
 
-  当consumer向一个broker发起fetch请求时，broker返回的records的大小最小值。如果broker中数据量不够的话会wait，直到数据大小满足这个条件。取值范围是：[0, Integer.Max]，默认值是1。
+默认值设置为1的目的是：使得consumer的请求能够尽快的返回。
 
-  默认值设置为1的目的是：使得consumer的请求能够尽快的返回。
+<table><tr><td bgcolor=gray><big>fetch.max.bytes</big></td></tr></table>
 
-- **fetch.max.bytes**
+&emsp;&emsp;一次fetch请求，从一个broker中取得的records最大大小。如果在从topic中第一个非空的partition取消息时，如果取到的第一个record的大小就超过这个配置时，仍然会读取这个record，也就是说在这片情况下，只会返回这一条record。
 
-  一次fetch请求，从一个broker中取得的records最大大小。如果在从topic中第一个非空的partition取消息时，如果取到的第一个record的大小就超过这个配置时，仍然会读取这个record，也就是说在这片情况下，只会返回这一条record。
+&emsp;&emsp;broker、topic都会对producer发给它的message size做限制。所以在配置这值时，可以参考broker的message.max.bytes 和 topic的max.message.bytes的配置。取值范围是：[0, Integer.Max]，默认值是：52428800 （5 MB）
 
-  broker、topic都会对producer发给它的message size做限制。所以在配置这值时，可以参考broker的message.max.bytes 和 topic的max.message.bytes的配置。
+<table><tr><td bgcolor=gray><big>max.partition.fetch.bytes</big></td></tr></table>
 
-  取值范围是：[0, Integer.Max]，默认值是：52428800 （5 MB）
+&emsp;&emsp;一次fetch请求，从一个partition中取得的records最大大小。如果在从topic中第一个非空的partition取消息时，如果取到的第一个record的大小就超过这个配置时，仍然会读取这个record，也就是说在这片情况下，只会返回这一条record。
 
-- **max.partition.fetch.bytes**
+&emsp;&emsp;broker、topic都会对producer发给它的message size做限制。所以在配置这值时，可以参考broker的message.max.bytes 和 topic的max.message.bytes的配置。
 
-  一次fetch请求，从一个partition中取得的records最大大小。如果在从topic中第一个非空的partition取消息时，如果取到的第一个record的大小就超过这个配置时，仍然会读取这个record，也就是说在这片情况下，只会返回这一条record。
+<table><tr><td bgcolor=gray><big>max.poll.interval.ms</big></td></tr></table>
 
-  broker、topic都会对producer发给它的message size做限制。所以在配置这值时，可以参考broker的message.max.bytes 和 topic的max.message.bytes的配置。
+前面说过要求程序中不间断的调用poll()。如果长时间没有调用poll，且间隔超过这个值时，就会认为这个consumer失败了。
 
-- **max.poll.interval.ms**
+<table><tr><td bgcolor=gray><big>max.poll.records</big></td></tr></table>
 
-  前面说过要求程序中不间断的调用poll()。如果长时间没有调用poll，且间隔超过这个值时，就会认为这个consumer失败了。
+Consumer每次调用poll()时取到的records的最大数。
 
-- **max.poll.records**
+<table><tr><td bgcolor=gray><big>receive.buffer.byte</big></td></tr></table>
 
-    Consumer每次调用poll()时取到的records的最大数。
+Consumer receiver buffer （SO_RCVBUF）的大小。这个值在创建Socket连接时会用到。
 
-- **receive.buffer.byte**
+取值范围是：[-1, Integer.MAX]。默认值是：65536 （64 KB）
 
-  Consumer receiver buffer （SO_RCVBUF）的大小。这个值在创建Socket连接时会用到。
+如果值设置为-1，则会使用操作系统默认的值。
 
-  取值范围是：[-1, Integer.MAX]。默认值是：65536 （64 KB）
+<table><tr><td bgcolor=gray><big>request.timeout.ms</big></td></tr></table>
 
-  如果值设置为-1，则会使用操作系统默认的值。
+请求发起后，并不一定会很快接收到响应信息。这个配置就是来配置请求超时时间的。默认值是：305000 （305 s）
 
-- **request.timeout.ms**
+<table><tr><td bgcolor=gray><big>client.id</big></td></tr></table>
 
-  请求发起后，并不一定会很快接收到响应信息。这个配置就是来配置请求超时时间的。默认值是：305000 （305 s）
+Consumer进程的标识。如果设置一个人为可读的值，跟踪问题会比较方便。
 
-- **client.id**
+<table><tr><td bgcolor=gray><big>interceptor.classes</big></td></tr></table>
 
-  Consumer进程的标识。如果设置一个人为可读的值，跟踪问题会比较方便。
+用户自定义interceptor。
 
-- **interceptor.classes**
+<table><tr><td bgcolor=gray><big>metadata.max.age.ms</big></td></tr></table>
 
-    用户自定义interceptor。
+Metadata数据的刷新间隔。即便没有任何的partition订阅关系变更也行执行。
 
-- **metadata.max.age.ms**
-
-  Metadata数据的刷新间隔。即便没有任何的partition订阅关系变更也行执行。
-
-  范围是：[0, Integer.MAX]，默认值是：300000 （5 min）
+范围是：[0, Integer.MAX]，默认值是：300000 （5 min）
