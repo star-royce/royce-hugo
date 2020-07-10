@@ -1,6 +1,6 @@
 ---
 title: "Kafka消费详解"
-date: 2020-06-02
+date: 2020-07-10
 slug: "Kafka consumer detail"
 draft: false
 tags:
@@ -8,8 +8,9 @@ tags:
 - Kafka
 categories:
 - Kafka
-
 ---
+
+
 
 > 参考文档: https://www.cnblogs.com/rainwang/p/7493742.html
 
@@ -196,3 +197,79 @@ Consumer进程的标识。如果设置一个人为可读的值，跟踪问题会
 Metadata数据的刷新间隔。即便没有任何的partition订阅关系变更也行执行。
 
 范围是：[0, Integer.MAX]，默认值是：300000 （5 min）
+
+
+
+## 五、Java 消费 
+
+<table><tr><td bgcolor=gray><big>依赖导入(pom)</big></td></tr></table>
+
+1. 基础包 org.apache.kafka
+
+```java
+<dependency>
+    <groupId>org.apache.kafka</groupId>
+    <artifactId>kafka_2.11</artifactId>
+    <version>2.2.0</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.kafka</groupId>
+    <artifactId>kafka-clients</artifactId>
+    <version>2.3.1</version>
+</dependency>
+```
+
+2. spring 集成
+
+```java
+<dependency>
+    <groupId>org.springframework.kafka</groupId>
+    <artifactId>spring-kafka</artifactId>
+    <version>1.3.8.RELEASE</version>
+</dependency>
+  
+<dependency>
+    <groupId>org.springframework.integration</groupId>
+    <artifactId>spring-integration-kafka</artifactId>
+    <version>2.3.0.RELEASE</version>
+</dependency>
+```
+
+<table><tr><td bgcolor=gray><big>实时消费</big></td></tr></table>
+
+1. MessageListener 介绍
+
+   - MessageListener是最原始的消息监听器，它是JMS规范中定义的一个接口。其中定义了一个用于处理接收到的消息的onMessage方法
+
+2. Java配置 - applicationContext-kafka.xml
+
+   ```java
+   <!-- 消费者消息监听容器，执行doStart()方法 -->
+   <bean id="messageListenerContainer2" class="org.springframework.kafka.listener.ConcurrentMessageListenerContainer"
+             init-method="doStart">
+           <constructor-arg ref="consumerFactory"/>
+           <constructor-arg ref="containerProperties2"/>
+           <property name="concurrency" value="${xx.kafka.currency}"/>
+   </bean>
+   <!-- 消费容器绑定Topic -->
+   <bean id="containerProperties2" class="org.springframework.kafka.listener.config.ContainerProperties">
+       <!--<constructor-arg value="master_info,enum_info"/>--> <!--监听topic-->
+       <constructor-arg>
+           <array>
+               <value>${kafka.topic2}</value>
+           </array>
+       </constructor-arg>
+       <property name="messageListener" ref="merchantIfListernerConsumerService"/>
+   </bean>
+   <!-- 实际执行消息消费的类 -->
+   <bean id="merchantIfListernerConsumerService" class="x.kafka.MerchantIfConsumerListener"/>
+   ```
+
+3. Java类代码实现
+
+   - 在java srping框架下，新建类实现MessageListener接口，并在onMessage方法中实现具体业务代码即可。
+   - 结合 2 java 配置，即新建 类名为 MerchantIfConsumerListener 的类，然后实现MessageListener接口中的onMessage方法
+
+4. 消息提交方式
+   - MessageListener 消费完消息后自动提交offset(enable.auto.commit=true时)
+     - 可提高效率，但存在消费失败但移动了偏移量的风险，即可能会有消息丢失。
