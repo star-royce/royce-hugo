@@ -4,10 +4,10 @@ date: 2020-06-02
 slug: "hugo docker operate"
 draft: false
 tags:
-- Environment
 - Hugo
+- Docker
 categories:
-- Environment
+- Hugo
 ---
 
 # 快捷方式

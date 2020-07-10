@@ -4,10 +4,10 @@ date: 2020-06-02
 slug: "hugo github combine"
 draft: false
 tags:
-- Environment
 - Hugo
+- Github
 categories:
-- Environment
+- Hugo
 ---
 
 # 快捷方式
@@ -121,9 +121,9 @@ rm -rf blog
   - 因为hugo默认是没有主题，所以必须先下载主题
   - 当前选用LeaveIt主题，可以到 https://themes.gohugo.io/ 挑选自己满意的主题，但是后续提及的主题配置，可能就不适用。
   - 将主题下载到themes文件夹中
-  `git clone https://github.com/liuzc/LeaveIt.git theme/`
+    `git clone https://github.com/liuzc/LeaveIt.git theme/`
   - 删除.git文件，避免git冲突
-  `rm -rf theme/LeaveIt/.git`
+    `rm -rf theme/LeaveIt/.git`
   - 主题应用
   ```
   # 基础配置文件，指定所用主题，以及主题一些关键信息
@@ -190,6 +190,7 @@ rm -rf blog
    </div>
    ```
 4. 文章页脚license修改
+    
     - 修改 "config.toml"中的 `license= 'xxxx'`
 5. md内html语法支持
     - 新版本的 Hugo （从 version 0.6）使用的 Markdown 渲染器从 blackfriday 改成了 goldmark，默认禁止在 Markdown 中使用 raw html 代码。需要的话得自己开启
@@ -227,7 +228,7 @@ rm -rf blog
             border-radius: 2px;
             margin-left: 3px;
             margin-right: 3px;
-
+    
             .dark-theme &:not([class]) {
                 background: #2d2d2d;
                 color: #e06c75;
@@ -241,7 +242,7 @@ rm -rf blog
 ## MarkDown 文件编辑
   - 新建一个md文档 `hugo new posts/my-first-blog.md`, 配置Front Matter填充一定内容，用于页面分类展示
 
-        ---
+      ---
         title: "Hugo+Github最佳实践"
         date: 2020-06-02
         slug: "hugo github combine"
@@ -249,9 +250,9 @@ rm -rf blog
         tags:
         - Environment
         - Hugo
-        categories:
+          categories:
         - Environment    
-        ---
+      ---
   - 可以配置默认模版，每次用执行新建md文档时会自己生成，再根据需求稍作修改即可
       - 编辑文件, `/archetypes/default.md`
       - 具体内容参考下文
