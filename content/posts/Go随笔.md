@@ -2,7 +2,7 @@
 title: "Go随笔"
 date: 2020-06-02
 slug: "go study record"
-draft: true
+draft: false
 tags:
 - TECH
 - Go
@@ -14,7 +14,7 @@ categories:
 
 > 学习文档: https://draveness.me/golang/docs/part2-foundation/ch03-datastructure/golang-array-and-slice/
 
-## Slice
+## 一、Slice
 
 Go 语言中的切片有三种初始化的方式：
 
@@ -60,7 +60,7 @@ slice := make([]int, 10)
 
 1. Map 举例
 
-   ![golang-range-map](https://img.draveness.me/2020-01-17-15792766877639-golang-range-map.png)
+   ![img](../../static/images/md/hugo/2020-01-17-15792766877639-golang-range-map.png)
 
    
 
@@ -101,7 +101,72 @@ slice := make([]int, 10)
    3 3 3
    ```
 
-## 接口
+
+
+## 二、Map
+
+#### 冲突解决方法
+
+- 开放寻址法
+  - 核心思想: **对数组中的元素依次探测和比较以判断目标键值对是否存在于哈希表中**, 当我们向当前哈希表写入新的数据时发生了冲突，就会将键值对写入到下一个不为空的位置
+  - 数据结构: 数组
+  - 性能影响关键: **装载因子**(数组中元素的数量与数组大小的比值)，随着装载因子的增加，线性探测的平均用时就会逐渐增加，这会同时影响哈希表的读写性能，当装载率超过 70% 之后，哈希表的性能就会急剧下降，而一旦装载率达到 100%，整个哈希表就会完全失效，这时查找任意元素都需要遍历数组中全部的元素
+
+- 拉链法
+
+  - 好处: 实现比较开放地址法稍微复杂一些，但是平均查找的长度也比较短，各个用于存储节点的内存都是动态申请的，可以节省比较多的存储空间
+
+  - 数据结构: **链表数组**。有一些语言还会在拉链法的哈希中引入红黑树以优化性能。
+
+  - 实现方式:
+
+    - 哈希函数返回的哈希会帮助我们选择一个桶
+
+      - ```go
+        index := hash("Key6") % array.len
+        ```
+
+    - 选择了桶之后就可以遍历当前桶中的链表了
+
+      - 找到键相同的键值对 —— 更新键对应的值；
+      - 没有找到键相同的键值对 —— 在链表的末尾追加新键值对；
+
+  - 拉链法的装载因子(元素数量 / 桶数量)越大，哈希的读写性能就越差，在一般情况下使用拉链法的哈希表装载因子都不会超过 1，**当哈希表的装载因子较大时就会触发哈希的扩容**，创建更多的桶来存储哈希中的元素，保证性能不会出现严重的下降
+
+#### 溢出桶
+
+哈希表存储的数据逐渐增多，我们会对哈希表进行扩容或者使用额外的桶存储溢出的数据，不会让单个桶中的数据超过 8 个。过多的溢出桶最终也会导致哈希的扩容。
+
+溢出桶是在 Go 语言还使用 C 语言实现时就使用的设计[3](https://draveness.me/golang/docs/part2-foundation/ch03-datastructure/golang-hashmap/#fn:3)，由于它能够减少扩容的频率所以一直使用至今。
+
+![image-20200713150409313](../../static/images/md/hugo/image-20200713150409313.png)
+
+
+
+#### 取值语法差异
+
+赋值语句左侧接受参数的个数会决定使用的运行时方法：
+
+1. 当接受参数仅为一个时，会使用 [`runtime.mapaccess1`](https://github.com/golang/go/blob/36f30ba289e31df033d100b2adb4eaf557f05a34/src/runtime/map.go#L394-L450)，该函数仅会返回一个指向目标值的指针；
+2. 当接受两个参数时，会使用 [`runtime.mapaccess2`](https://github.com/golang/go/blob/36f30ba289e31df033d100b2adb4eaf557f05a34/src/runtime/map.go#L452-L508)，除了返回目标值之外，它还会返回一个用于表示当前键对应的值是否存在的布尔值：
+
+```go
+v     := hash[key] // => v     := *mapaccess1(maptype, hash, &key)
+v, ok := hash[key] // => v, ok := mapaccess2(maptype, hash, &key)
+```
+
+
+
+#### 扩容
+
+以下两种情况发生时触发哈希的扩容：
+
+1. 装载因子已经超过 6.5；翻倍扩容。
+2. 哈希使用了太多溢出桶；进行等量扩容 `sameSizeGrow`，一旦哈希中出现了过多的溢出桶，它就会创建新桶保存数据，垃圾回收会清理老的溢出桶并释放内存
+
+哈希在存储元素过多时会触发扩容操作，每次都会将桶的数量翻倍，整个扩容过程并不是原子的，而是通过 [`runtime.growWork`](https://github.com/golang/go/blob/36f30ba289e31df033d100b2adb4eaf557f05a34/src/runtime/map.go#L1104-L1113) 增量触发的，在扩容期间访问哈希表时会使用旧桶，向哈希表写入数据时会触发旧桶元素的分流；除了这种正常的扩容之外，为了解决大量写入、删除造成的内存泄漏问题，哈希引入了 `sameSizeGrow` 这一机制，在出现较多溢出桶时会对哈希进行『内存整理』减少对空间的占用。
+
+## 三、接口
 
 在 Go 中：实现接口的所有方法就隐式的实现了接口；
 
@@ -140,17 +205,17 @@ func main() {
 
 使用结构体带来的巨大性能差异不只是接口带来的问题，带来性能问题主要因为 Go 语言在函数调用时是传值的，动态派发的过程只是放大了参数拷贝带来的影响。
 
-## 反射
+## 四、反射
 
 Go 语言反射的三大法则，其中包括：
 
 1. 从 `interface{}` 变量可以反射出反射对象；
 
-   ![golang-interface-to-reflection](https://img.draveness.me/golang-interface-to-reflection.png)
+   ![img](../../static/images/md/hugo/golang-interface-to-reflection.png)
 
 2. 从反射对象可以获取 `interface{}` 变量；
 
-   ![golang-reflection-to-interface](https://img.draveness.me/golang-reflection-to-interface.png)
+   ![img](../../static/images/md/hugo/golang-reflection-to-interface.png)
 
 3. 要修改反射对象，其值必须可设置
 
@@ -175,7 +240,7 @@ Go 语言反射的三大法则，其中包括：
 
 
 
-## defer
+## 五、defer
 
 两大知识点
 
@@ -264,7 +329,7 @@ Go 语言反射的三大法则，其中包括：
 
 
 
-## panic 和 recover
+## 六、panic 和 recover
 
 特性:
 
@@ -334,4 +399,233 @@ Go 语言反射的三大法则，其中包括：
    ...
    exit status 2
    ```
+
+
+
+## 七、Make 和 New
+
+
+
+#### 区别
+
+- `make` 的作用是初始化内置的数据结构，并且准备了将要使用的值，只用于slice、map以及channel的初始化;
+
+  - ```go
+    // 一个包含 data、cap 和 len 的私有结构体
+    slice := make([]int, 0, 100)
+    // 指向 runtime.hmap 结构体
+    hash := make(map[int]bool, 10)
+    // 指向 runtime.hchan 结构体
+    ch := make(chan int, 5)
+    ```
+
+- `new` 的作用是根据传入的类型分配一片内存空间并返回指向这片内存空间的指针，用于类型的内存分配，并且内存置为零;
+
+  - ```go
+    // 以下两种写法等价
+    
+    // 写法1
+    i := new(int)
+    
+    // 写法2
+    var v int
+    i := &v
+    ```
+
+#### 编译期处理方式
+
+- 在编译期间的[类型检查](https://draveness.me/golang/docs/part1-prerequisite/ch02-compile/golang-typecheck/)阶段，Go 语言就将代表 `make` 关键字的 `OMAKE` 节点根据参数类型的不同转换成了 `OMAKESLICE`、`OMAKEMAP` 和 `OMAKECHAN` 三种不同类型的节点，这些节点会调用不同的运行时函数来初始化相应的数据结构。
+- 无论是直接使用 `new`，还是使用 `var` 初始化变量，它们在编译器看来就是 `ONEWOBJ` 和 `ODCL` 节点。这些节点在在[中间代码生成](https://draveness.me/golang/docs/part1-prerequisite/ch02-compile/golang-ir-ssa/)阶段都会被转换成通过 [`runtime.newobject`](https://github.com/golang/go/blob/5042317d6919d4c84557e04be35130430e8d1dd4/src/runtime/malloc.go#L1162-L1164) 函数在堆上申请内存。但是如果通过 `var` 或者 `new` 创建的变量不需要在当前作用域外生存，例如不用作为返回值返回给调用方，那么就不需要初始化在堆上。
+
+## 八、计时器
+
+#### 计时器维护调度
+
+###### 1. Go 1.9 版本之前 - 全局四叉堆
+
+- **所有的计时器由全局唯一的四叉堆维护**，存储在如下所示的结构体
+
+  - ```go
+    var timers struct {
+    	lock         mutex
+    	gp           *g
+    	created      bool
+    	sleeping     bool
+    	rescheduling bool
+    	sleepUntil   int64
+    	waitnote     note
+    	t            []*timer // 最小四叉堆
+    }
+    ```
+
+- 唤醒时机:
+
+  - 四叉堆中的计时器到期；
+  - 四叉堆中加入了触发时间更早的新计时器；
+
+- 缺点:
+
+  - 全局四叉堆共用的互斥锁对计时器的影响非常大，计时器的各种操作都需要获取全局唯一的互斥锁，这会严重影响计时器的性能
+
+###### 2. Go 1.10 ~ 1.13 - 分片四叉堆
+
+- Go 1.10 将全局的四叉堆分割成了 64 个更小的四叉堆，以牺牲内存占用的代价换取性能的提升。
+
+  - ```go
+    const timersLen = 64
+    
+    var timers [timersLen]struct {
+    	timersBucket
+    }
+    
+    type timersBucket struct {
+    	lock         mutex
+    	gp           *g
+    	created      bool
+    	sleeping     bool
+    	rescheduling bool
+    	sleepUntil   int64
+    	waitnote     note
+    	t            []*timer
+    }
+    ```
+
+- 维护方式:
+  - 如果当前机器上的处理器 P 的个数超过了 64，多个处理器上的计时器就可能存储在同一个桶中
+  - 每一个计时器桶都由一个运行 [`runtime.timerproc#76f4fd8`](https://github.com/golang/go/blob/76f4fd8a5251b4f63ea14a3c1e2fe2e78eb74f81/src/runtime/time.go#L195-L253) 函数的 Goroutine 处理
+- 缺点:
+  
+  - 虽然能够降低锁的粒度，提高计时器的性能，但是 [`runtime.timerproc#76f4fd8`](https://github.com/golang/go/blob/76f4fd8a5251b4f63ea14a3c1e2fe2e78eb74f81/src/runtime/time.go#L195-L253) 造成的处理器和线程之间频繁的上下文切换却成为了影响计时器性能的首要因素
+
+###### 3. Go 1.14 版本之后 - 每个处理器单独管理计时器并通过网络轮询器触发
+
+- 在最新版本的实现中，计时器桶已经被移除[7](https://draveness.me/golang/docs/part3-runtime/ch06-concurrency/golang-timer/#fn:7)，所有的计时器都以最小四叉堆的形式存储在处理器 [`runtime.p`](https://github.com/golang/go/blob/8d7be1e3c9a98191f8c900087025c5e78b73d962/src/runtime/runtime2.go#L548) 中，计时器都交由处理器的网络轮询器和调度器触发
+
+  - ```go
+    type p struct {
+    	...
+    	timersLock mutex // 用于保护计时器的互斥锁；
+    	timers []*timer  // 存储计时器的最小四叉堆
+    
+    	numTimers     uint32 // 处理器中的计时器数量；
+    	adjustTimers  uint32 // 处理器中处于 timerModifiedEarlier 状态的计时器数量；
+    	deletedTimers uint32 // 处理器中处于 timerDeleted 状态的计时器数量；
+    	...
+    }
+    ```
+
+- 优势: 能够充分利用本地性、减少线上上下文的切换开销
+
+#### 计时器数据结构
+
+1. 私有的计时器运行时表示 - [`runtime.timer`](https://github.com/golang/go/blob/895b7c85addfffe19b66d8ca71c31799d6e55990/src/runtime/time.go#L17)
+
+   ```go
+   type timer struct {
+   	pp puintptr
+   
+   	when     int64 // 当前计时器被唤醒的时间；
+   	period   int64 // 两次被唤醒的间隔；
+   	f        func(interface{}, uintptr) // 每当计时器被唤醒时都会调用的函数；
+   	arg      interface{} // 计时器被唤醒时调用 f 传入的参数；
+   	seq      uintptr
+   	nextwhen int64 // 计时器处于 timerModifiedXX 状态时，用于设置 when 字段；
+   	status   uint32 // 计时器的状态；
+   }
+   ```
+
+2. 对外暴露的计时器 - [`time.Timer`](https://github.com/golang/go/blob/8d7be1e3c9a98191f8c900087025c5e78b73d962/src/time/sleep.go#L47)
+
+   ```go
+   type Timer struct {
+   	C <-chan Time
+   	r runtimeTimer
+   }
+   ```
+
+## Channel
+
+#### 1. 底层数据结构
+
+```go
+// 底层Channel
+type hchan struct {
+	qcount   uint // Channel 中的元素个数；
+	dataqsiz uint //  Channel 中的循环队列的长度；
+	buf      unsafe.Pointer // Channel 的缓冲区数据指针；
+	elemsize uint16 // 当前 Channel 能够收发的元素大小
+	closed   uint32
+	elemtype *_type // 当前 Channel 能够收发的元素类型
+	sendx    uint  // Channel 的发送操作处理到的位置；
+	recvx    uint  // Channel 的接收操作处理到的位置；
+	recvq    waitq // 当前 Channel 由于缓冲区空间不足而阻塞的 Goroutine 列表，使用双向链表表示
+	sendq    waitq // 当前 Channel 由于缓冲区空间不足而阻塞的 Goroutine 列表，使用双向链表表示
+	lock mutex
+}
+// 链表元素结构
+type waitq struct {
+	first *sudog
+	last  *sudog
+}
+```
+
+#### 2. 基础规则 - FIFO
+
+- 先从 Channel 读取数据的 Goroutine 会先接收到数据；
+- 先向 Channel 发送数据的 Goroutine 会得到先发送数据的权利；
+
+#### 3. 锁机制
+
+Channel 是一个用于同步和通信的有锁队列。使用互斥锁解决程序中可能存在的线程竞争问题是很常见的，我们能很容易地实现有锁队列。
+
+#### 4. 发送数据
+
+<table><tr><td bgcolor=gray>情景分析</td></tr></table>
+
+- 如果当前 Channel 的 `recvq` 上存在已经被阻塞的 Goroutine，那么会**直接将数据发送**给当前的 Goroutine 并将其设置成下一个运行的 Goroutine；
+- 如果 Channel 存在缓冲区并且其中还有空闲的容量，我们就会**直接将数据直接存储到当前缓冲区** `sendx` 所在的位置上；
+- 如果不满足上面的两种情况，就会创建一个 [`runtime.sudog`](https://github.com/golang/go/blob/895b7c85addfffe19b66d8ca71c31799d6e55990/src/runtime/runtime2.go#L342) 结构并将其加入 Channel 的 `sendq` 队列中，当前 Goroutine 也会**陷入阻塞等待**其他的协程从 Channel 接收数据；
+
+ <table><tr><td bgcolor=gray>Goroutine调度时机</td></tr></table>
+
+- 发送数据时发现 Channel 上存在等待接收数据的 Goroutine，立刻设置处理器的 `runnext` 属性，但是并不会立刻触发调度，而是在处理器本身下一次调度时，会优先调度此Goroutine；
+- 发送数据时并没有找到接收方并且缓冲区已经满了，这时就会将自己加入 Channel 的 `sendq` 堵塞队列并调用 [`runtime.goparkunlock`](https://github.com/golang/go/blob/cfe3cd903f018dec3cb5997d53b1744df4e53909/src/runtime/proc.go#L309) 触发 Goroutine 的调度让出处理器的使用权；
+
+#### 5. 接收数据
+
+<table><tr><td bgcolor=gray>情景分析</td></tr></table>
+
+- 如果 Channel 为空，那么就会直接调用 [`runtime.gopark`](https://github.com/golang/go/blob/64c22b70bf00e15615bb17c29f808b55bc339682/src/runtime/proc.go#L287) 挂起当前 Goroutine；
+- 如果 Channel 已经关闭并且缓冲区没有任何数据，[`runtime.chanrecv`](https://github.com/golang/go/blob/e35876ec6591768edace6c6f3b12646899fd1b11/src/runtime/chan.go#L422) 函数会直接返回；
+- 如果 Channel 的 `sendq` 队列中存在挂起的 Goroutine，就会将 `recvx` 索引所在的数据拷贝到接收变量所在的内存空间上并将 `sendq` 队列中 Goroutine 的数据拷贝到缓冲区；
+- 如果 Channel 的缓冲区中包含数据就会直接读取 `recvx` 索引对应的数据；
+- 在默认情况下会挂起当前的 Goroutine，将 [`runtime.sudog`](https://github.com/golang/go/blob/895b7c85addfffe19b66d8ca71c31799d6e55990/src/runtime/runtime2.go#L342) 结构加入 `recvq` 队列并陷入休眠等待调度器的唤醒；
+
+ <table><tr><td bgcolor=gray>Goroutine调度时机</td></tr></table>
+
+- 当 Channel 为空时；
+- 当缓冲区中不存在数据并且也不存在数据的发送者时；
+
+#### 6. 缓冲区
+
+- 没有缓冲区的channel，必须同时存在收发动作，二者缺其一，都会造成阻塞
+
+- 有缓冲区的channel
+
+  - 缓冲区满之前，发送动作不会阻塞
+  - 缓冲区为空的时候，接收动作会阻塞
+
+- 代码示例
+
+  ``` go
+  // 没有缓冲区
+  c := make(chan int, 0)
+  
+  // 有缓冲区 - 缓冲区满的时候，也会阻塞
+  c := make(chan int, 10)
+  ```
+
+#### 7. Channel 关闭
+
+**<font color=red>重点:</font>** 当 Channel 是一个空指针或者已经被关闭时，Go 语言运行时都会直接 `panic` 并抛出异常
 
