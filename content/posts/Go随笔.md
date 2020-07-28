@@ -543,7 +543,7 @@ Go 语言反射的三大法则，其中包括：
    }
    ```
 
-## Channel
+## 九、Channel
 
 #### 1. 底层数据结构
 
@@ -629,3 +629,34 @@ Channel 是一个用于同步和通信的有锁队列。使用互斥锁解决程
 
 **<font color=red>重点:</font>** 当 Channel 是一个空指针或者已经被关闭时，Go 语言运行时都会直接 `panic` 并抛出异常
 
+
+
+## 十、内存管理
+
+&emsp;&emsp;内存管理一般包含三个不同的组件，分别是用户程序（Mutator）、分配器（Allocator）和收集器（Collector）1，当用户程序申请内存时，它会通过内存分配器申请新的内存，而分配器会负责从堆中初始化相应的内存区域。
+
+&emsp;&emsp;因为程序中的绝大多数对象的大小都在 32KB 以下，而申请的内存大小影响 Go 语言运行时分配内存的过程和开销，所以分别处理大对象和小对象有利于提高内存分配器的性能。Go 语言的内存分配器会根据申请分配的内存大小选择不同的处理逻辑，运行时根据对象的大小将对象分成微对象、小对象和大对象三种：
+
+| 类别   | 大小          | 内存使用                                                   |
+| ------ | ------------- | ---------------------------------------------------------- |
+| 微对象 | `(0, 16B)`    | 先使用微型分配器，再依次尝试线程缓存、中心缓存和堆分配内存 |
+| 小对象 | `[16B, 32KB]` | 依次尝试使用线程缓存、中心缓存和堆分配内存                 |
+| 大对象 | `(32KB, +∞)`  | 直接在堆上分配内存                                         |
+
+&emsp;&emsp;Go 语言的内存分配器包含内存管理单元、线程缓存、中心缓存和页堆。对应的数据结构 [`runtime.mspan`](https://github.com/golang/go/blob/921ceadd2997f2c0267455e13f909df044234805/src/runtime/mheap.go#L358)、[`runtime.mcache`](https://github.com/golang/go/blob/01d137262a713b308c4308ed5b26636895e68d89/src/runtime/mcache.go#L19)、[`runtime.mcentral`](https://github.com/golang/go/blob/8ac98e7b3fcadc497c4ca7d8637ba9578e8159be/src/runtime/mcentral.go#L20) 和 [`runtime.mheap`](https://github.com/golang/go/blob/8ac98e7b3fcadc497c4ca7d8637ba9578e8159be/src/runtime/mheap.go#L40)
+
+ <table><tr><td bgcolor=gray>内存布局</td></tr></table>
+
+1. Go 语言程序都会在启动初始化时，每一个处理器都会被分配一个线程缓存 [`runtime.mcache`](https://github.com/golang/go/blob/01d137262a713b308c4308ed5b26636895e68d89/src/runtime/mcache.go#L19) 用于处理微对象和小对象的分配，它们会持有内存管理单元 [`runtime.mspan`](https://github.com/golang/go/blob/921ceadd2997f2c0267455e13f909df044234805/src/runtime/mheap.go#L358)。但是，线程缓存在刚刚被初始化时是不包含 [`runtime.mspan`](https://github.com/golang/go/blob/921ceadd2997f2c0267455e13f909df044234805/src/runtime/mheap.go#L358) 的，只有当用户程序申请内存时才会从上一级组件获取新的 [`runtime.mspan`](https://github.com/golang/go/blob/921ceadd2997f2c0267455e13f909df044234805/src/runtime/mheap.go#L358) 满足内存分配的需求。
+
+2. 每个类型的内存管理单元都会管理特定大小的对象，当内存管理单元中不存在空闲对象时，它们会从 [`runtime.mheap`](https://github.com/golang/go/blob/8ac98e7b3fcadc497c4ca7d8637ba9578e8159be/src/runtime/mheap.go#L40) 持有的 134 个中心缓存 [`runtime.mcentral`](https://github.com/golang/go/blob/8ac98e7b3fcadc497c4ca7d8637ba9578e8159be/src/runtime/mcentral.go#L20) 中获取新的内存单元。
+3. 中心缓存属于全局的堆结构体 [`runtime.mheap`](https://github.com/golang/go/blob/8ac98e7b3fcadc497c4ca7d8637ba9578e8159be/src/runtime/mheap.go#L40)，它会从操作系统中申请内存。与线程缓存不同，访问中心缓存中的内存管理单元需要使用互斥锁。线程缓存会通过中心缓存的 [`runtime.mcentral.cacheSpan`](https://github.com/golang/go/blob/8ac98e7b3fcadc497c4ca7d8637ba9578e8159be/src/runtime/mcentral.go#L40) 方法获取新的内存管理单元。
+4. [`runtime.mheap`](https://github.com/golang/go/blob/8ac98e7b3fcadc497c4ca7d8637ba9578e8159be/src/runtime/mheap.go#L40) 会持有 4,194,304 [`runtime.heapArena`](https://github.com/golang/go/blob/e7f9e17b7927cad7a93c5785e864799e8d9b4381/src/runtime/mheap.go#L217)，每一个 [`runtime.heapArena`](https://github.com/golang/go/blob/e7f9e17b7927cad7a93c5785e864799e8d9b4381/src/runtime/mheap.go#L217) 都会管理 64MB 的内存，单个 Go 语言程序的内存上限也就是 256TB。
+
+ <table><tr><td bgcolor=gray>从堆中申请内存</td></tr></table>
+
+1. 如果申请的内存比较小，获取申请内存的处理器并尝试调用 [`runtime.pageCache.alloc`](https://github.com/golang/go/blob/ebe49b2c2999a7d4128c44aed9602a69fdc53d16/src/runtime/mpagecache.go#L38) 获取内存区域的基地址和大小；
+2. 如果申请的内存比较大或者线程的页缓存中内存不足，会通过 [`runtime.pageAlloc.alloc`](https://github.com/golang/go/blob/98858c438016bbafd161b502a148558987aa44d5/src/runtime/mpagealloc.go#L754) 在页堆上申请内存；
+3. 如果发现页堆上的内存不足，会尝试通过 `runtime.mheap.grow` 进行扩容并重新调用 `runtime.pageAlloc.alloc`申请内存
+   - 如果申请到内存，意味着扩容成功；
+   - 如果没有申请到内存，意味着扩容失败，宿主机可能不存在空闲内存，运行时会直接中止当前程序；
