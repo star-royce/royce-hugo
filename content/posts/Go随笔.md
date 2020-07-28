@@ -60,7 +60,7 @@ slice := make([]int, 10)
 
 1. Map 举例
 
-   ![img](../../static/images/md/hugo/2020-01-17-15792766877639-golang-range-map.png)
+   ![golang-range-map](https://i.loli.net/2020/07/28/Imn2BqUoPdEajDg.png)
 
    
 
@@ -139,7 +139,7 @@ slice := make([]int, 10)
 
 溢出桶是在 Go 语言还使用 C 语言实现时就使用的设计[3](https://draveness.me/golang/docs/part2-foundation/ch03-datastructure/golang-hashmap/#fn:3)，由于它能够减少扩容的频率所以一直使用至今。
 
-![image-20200713150409313](../../static/images/md/hugo/image-20200713150409313.png)
+![image-20200713150409313](https://i.loli.net/2020/07/28/CUp43BlgEwVvGuM.png)
 
 
 
@@ -211,11 +211,11 @@ Go 语言反射的三大法则，其中包括：
 
 1. 从 `interface{}` 变量可以反射出反射对象；
 
-   ![img](../../static/images/md/hugo/golang-interface-to-reflection.png)
+   ![golang-interface-to-reflection](https://i.loli.net/2020/07/28/P7H6IOb5utVgcz2.png)
 
 2. 从反射对象可以获取 `interface{}` 变量；
 
-   ![img](../../static/images/md/hugo/golang-reflection-to-interface.png)
+   ![golang-reflection-to-interface](https://i.loli.net/2020/07/28/I1nUsbx3FwjPJEm.png)
 
 3. 要修改反射对象，其值必须可设置
 

@@ -38,7 +38,7 @@ categories:
 
 #### 简易版代码实现
 
-```
+```go
 
 func SaramaProducer()  {
 

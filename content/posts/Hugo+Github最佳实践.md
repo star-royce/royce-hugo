@@ -29,7 +29,7 @@ categories:
     - 解压至当前文件夹，确定exe文件的名称，确保为hugo.exe，如果不是，请重命名
     - 将"D:\Hugo\Sites"配置到环境变量中
   - Git Clone方式，参考文档 https://s0gohugo0io.icopy.site/getting-started/installing/
-  ```
+  ```shell
   mkdir $HOME/src
   cd $HOME/src
   git clone https://github.com/gohugoio/hugo.git
@@ -53,20 +53,20 @@ categories:
 #### 2. 网站仓库初始化
 
 初始化一个仓库，用于承载未来的博客网站Html文件(**必须公开，必须初始化README.md**)
-![repostory](/images/md/hugo/repostory_prepare.jpg)
+![repostory_prepare](https://i.loli.net/2020/07/28/NUV36xjQ54duF7a.jpg)
 
 #### 3. 使用 github page 功能
 - 进入setting页
-  ![setting](/images/md/hugo/into_setting.png)
+  ![into_setting](https://i.loli.net/2020/07/28/htKMmdB8IbG4fer.png)
 - 找到GitHub Pages，选择Choose a theme(随便选，只要是拿到托管的网址)
-  ![pages](/images/md/hugo/github_page_config.png)
+  ![github_page_config](https://i.loli.net/2020/07/28/QK53FBl8yGcN2ed.png)
 - Commit README.md
     - 选择一个theme后,会自动生成README.md内容，并跳转到提交页
     - 这也是为什么一开始初始化项目的时候必须初始化一个README.md
     - **这里的commit不能忽略**，后续网站是否能正常的应用css/js，跟这个有一定关系
 
 - 确定网址可用
-  ![url](/images/md/hugo/url_confirm.png)
+  ![url_confirm](https://i.loli.net/2020/07/28/1GvYyldBPbgrjF4.png)
 
 ## 源文件项目准备
 
@@ -85,7 +85,7 @@ categories:
     - **<font color=red>执行报错</font>**，"A git directory for 'public' is found locally with remote(s):", 是因为根目录项目已经关联过一次，需要删干净。需要在项目根目录下执行指令
        - `rm -rf .gitmodules`, 删除.gitmodules文件
        - `vim .git/config`, 删除 subModule配置
-       ![submodule](/images/md/hugo/config_submodule.png)
+       ![config_submodule](https://i.loli.net/2020/07/28/CJ42oahsc79SbPf.png)
        - `rm -rf .git/modules/path_to_submodule`, 删除本地相关文件
        - 再次执行git submodule指令即可
 
@@ -98,7 +98,7 @@ categories:
   `hugo new site <自定义项目名，如blog>`
 
 #### 3. 创建完成后，会把blog作为根目录文件夹，然后在该文件夹下会生成以下文件结构。
-```
+```shell
 ├── archetypes # 存放生成博客的模版
 ├── assets # 存放被 Hugo Pipes 处理的文件
 ├── config # 存放 hugo 配置文件 支持 JSON YAML TOML 三种格式配置文件
@@ -125,7 +125,7 @@ rm -rf blog
   - 删除.git文件，避免git冲突
     `rm -rf theme/LeaveIt/.git`
   - 主题应用
-  ```
+  ```shell
   # 基础配置文件，指定所用主题，以及主题一些关键信息
   cp themes/LeaveIt/exampleSite/config.toml ./
   # 用于存放md文件
@@ -138,7 +138,7 @@ rm -rf blog
 
 #### 1. config.toml 文件配置
 
-  ```
+  ```toml
   baseURL = "实际Github Page生成的网站地址"
   languageCode = "zh-cn" # 指定为中文
   defaultContentLanguage = "zh-cn" #指定为中文
@@ -179,7 +179,7 @@ rm -rf blog
 3. 文章字数及阅读时长统计
    - 找到文件`themes/LeaveIt/layouts/_default/single.html`
    - 新增内容
-   ```
+   ```html
    # 方式1，只显示字数
    <!-- <span class="post-word-count">, {{ .WordCount }} words</span> -->
    # 方式2，显示字数及预估阅读时长
@@ -190,7 +190,7 @@ rm -rf blog
    </div>
    ```
 4. 文章页脚license修改
-    
+   
     - 修改 "config.toml"中的 `license= 'xxxx'`
 5. md内html语法支持
     - 新版本的 Hugo （从 version 0.6）使用的 Markdown 渲染器从 blackfriday 改成了 goldmark，默认禁止在 Markdown 中使用 raw html 代码。需要的话得自己开启
@@ -206,9 +206,10 @@ rm -rf blog
    - 原效果字体选中为淡蓝色，不太显眼，参考文档后进行修改，改为深黑色效果.具体操作如下
    - 打开 `/themes/LeaveIt/assets/css/_common/_core/base.scss`, 搜索 `::selection`, 替换为
 
-            ::selection {
-              background: #080808;
-          	color: #FFFFFF;
+        ```css
+        ::selection {
+          background: #080808;
+          color: #FFFFFF;
             }
             ::-moz-selection {
               background: #080808;
@@ -217,23 +218,26 @@ rm -rf blog
             ::-webkit-selection {
               background: #080808;
               color: #FFFFFF;
-            }
+         }
+        ```
 7. 代码高亮样式修改
     - 原样式的代码高亮看着不舒服，可以进行以下修改
     - 打开 `themes/LeaveIt/assets/css/_common/_page/post.scss`, 搜索 `code:not([class])`, 替换为
 
-          code:not([class]) {
-            padding: 2px 4px;
-            color: #ef3982;
-            border-radius: 2px;
-            margin-left: 3px;
-            margin-right: 3px;
-    
-            .dark-theme &:not([class]) {
-                background: #2d2d2d;
-                color: #e06c75;
-            }
-          }
+      ```css
+      code:not([class]) {
+        padding: 2px 4px;
+        color: #ef3982;
+        border-radius: 2px;
+        margin-left: 3px;
+      margin-right: 3px;
+      
+        .dark-theme &:not([class]) {
+            background: #2d2d2d;
+            color: #e06c75;
+        }
+      }
+      ```
 
 
 
@@ -275,13 +279,13 @@ rm -rf blog
 
 #### 1. 本地网站检查
 - 回到项目根路径，执行 `hugo server -w`, 启动成功后，访问相应地址即可
-  ![url](/images/md/hugo/hugo_run.png)
+  ![hugo_run](https://i.loli.net/2020/07/28/71sAu8FvnYfD3jx.png)
 
 #### 2. GitHub Pages 网站部署
 - 确定本地网站正常后，执行 `hugo` 打包静态html，此时会把内容输入到 "public"文件夹中
 - 进入public文件夹，将静态文件推送到Github Page所在项目
 
-    ```
+    ```shell
     cd public
     git status
     git add .
@@ -296,7 +300,7 @@ rm -rf blog
 
 ## Hugo 源项目备份到远程仓库
 返回根目录，保存源文件到远程仓库
-  ```
+  ```shell
   cd ..
   git status
   git add .
@@ -308,7 +312,7 @@ rm -rf blog
 
 可以在源项目根路径下新建一个shell脚本，内容如下，后续编写博客内容后，直接运行此脚本即可一键部署。
 
-```
+```shell
 #!/bin/bash
 # 部署到 github pages 脚本
 # 错误时终止脚本
