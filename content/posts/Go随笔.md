@@ -12,7 +12,9 @@ categories:
 
 
 
-> 学习文档: https://draveness.me/golang/docs/part2-foundation/ch03-datastructure/golang-array-and-slice/
+> 特别声明，以下内容为笔者在拜读大佬博客的过程中，随性记下的一些内容。即存在直接COPY原文的部分，也有基于原文自己做了总结的部分。
+>
+> 大佬博客原文请参见: https://draveness.me/golang/docs/part2-foundation/ch03-datastructure/golang-array-and-slice/
 
 ## 一、Slice
 
