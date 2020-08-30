@@ -37,10 +37,10 @@ categories:
   - 将黑色对象指向的所有对象都标记成灰色，保证该对象和被该对象引用的对象都不会被回收；
   - 重复上述两个步骤直到对象图中不存在灰色对象；
   - 将白色对象清除掉
-  - ![tri-color-mark-sweep](https://img.draveness.me/2020-03-16-15843705141814-tri-color-mark-sweep.png)
+  - ![tri-color-mark-sweep](https://img-1302326115.cos.ap-guangzhou.myqcloud.com/img/2020-03-16-15843705141814-tri-color-mark-sweep.png)
 - 悬挂指针：
   - 三色标记清除算法本身是不可以并发或者增量执行的，它仍然需要 STW，否则的话，如下图，标记到最后本该是D可回收，但是在标记完毕、准备/开始清除的过程中，程序建立了从 A 对象到 D 对象的引用，则会将本来不应该被回收的对象却被回收了，这在内存管理中是非常严重的错误，我们将这种错误称为悬挂指针，即指针没有指向特定类型的合法对象，影响了内存的安全性。
-  - ![tri-color-mark-sweep-and-mutator](https://img.draveness.me/2020-03-16-15843705141828-tri-color-mark-sweep-and-mutator.png)
+  - ![tri-color-mark-sweep-and-mutator](https://img-1302326115.cos.ap-guangzhou.myqcloud.com/img/2020-03-16-15843705141828-tri-color-mark-sweep-and-mutator.png)
 - 屏障技术 
   - 出现的目的: 解决悬挂指针问题，保证代码对内存操作的顺序性。(在内存屏障前执行的操作一定会先于内存屏障后执行的操作)
   - 根本思路(如何避免出现悬挂指针错误?)
