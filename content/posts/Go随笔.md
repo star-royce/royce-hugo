@@ -662,3 +662,20 @@ Channel 是一个用于同步和通信的有锁队列。使用互斥锁解决程
 3. 如果发现页堆上的内存不足，会尝试通过 `runtime.mheap.grow` 进行扩容并重新调用 `runtime.pageAlloc.alloc`申请内存
    - 如果申请到内存，意味着扩容成功；
    - 如果没有申请到内存，意味着扩容失败，宿主机可能不存在空闲内存，运行时会直接中止当前程序；
+
+## 十一、GC
+
+Go 语言为了实现高性能的并发垃圾收集器，使用三色抽象、并发增量回收、混合写屏障、调步算法以及用户程序协助等机制将垃圾收集的暂停时间优化至毫秒级以下。
+
+#### 触发时机
+
+1. 后台触发。
+   - 运行时会在应用程序启动时在后台开启一个用于强制触发垃圾收集的 Goroutine，调用 [`runtime.gcStart`](https://github.com/golang/go/blob/64c22b70bf00e15615bb17c29f808b55bc339682/src/runtime/mgc.go#L1221) 方法尝试启动新一轮的垃圾收集。
+2. 手动触发
+   - 用户程序会通过 [`runtime.GC`](https://github.com/golang/go/blob/64c22b70bf00e15615bb17c29f808b55bc339682/src/runtime/mgc.go#L1055) 函数在程序运行期间主动通知运行时执行，会阻塞调用方直到当前垃圾收集循环完成。
+   - 在垃圾收集期间也可能会通过 STW 暂停整个程序
+3. 申请内存
+   - 当前线程的内存管理单元中不存在空闲空间时，创建微对象和小对象需要调用 [`runtime.mcache.nextFree`](https://github.com/golang/go/blob/921ceadd2997f2c0267455e13f909df044234805/src/runtime/malloc.go#L858) 方法从中心缓存或者页堆中获取新的管理单元，在这时就<font color=yellow>可能触发垃圾收集</font>；
+   - 当用户程序申请分配 32KB 以上的大对象时，<font color=yellow>一定会构建 [`runtime.gcTrigger`](https://github.com/golang/go/blob/64c22b70bf00e15615bb17c29f808b55bc339682/src/runtime/mgc.go#L1163) 结构体尝试触发 垃圾收集</font>；
+     - `gc_trigger`能够决定触发垃圾收集的时间以及用户程序和后台处理的标记任务的多少，利用反馈控制的算法根据堆的增长情况和垃圾收集 CPU 利用率确定触发垃圾收集的时机。
+
