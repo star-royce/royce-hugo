@@ -223,7 +223,7 @@ Go中的Map遍历是无序的，其原因有二
    // and we're not already in the middle of growing, start growing.
    if !h.growing() && (overLoadFactor(h.count+1, h.B) || tooManyOverflowBuckets(h.noverflow, h.B)) {
        /**
-       	hashGrow() 函数实际上并没有真正地“搬迁”，它只是分配好了新的 buckets，并将老的 buckets 挂到了 oldbuckets 字段上(申请到了新的 buckets 		空间，把相关的标志位都进行了处理)。真正搬迁 buckets 的动作在 `growWork()` 函数中。
+       	hashGrow() 函数实际上并没有真正地“搬迁”，它只是分配好了新的 buckets，并将老的 buckets 挂到了 oldbuckets 字段上(申请到了新的 buckets空间，把相关的标志位都进行了处理)。真正搬迁 buckets 的动作在 `growWork()` 函数中。
        	而调用 `growWork()` 函数的动作是在 mapassign 和 mapdelete 函数中。也就是插入或修改、删除 key 的时候，都会尝试进行搬迁 buckets 的工作。
        */
    	hashGrow(t, h)
