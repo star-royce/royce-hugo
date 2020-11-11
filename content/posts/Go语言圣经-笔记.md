@@ -156,7 +156,7 @@ func main() {
   s += ", right foot"
   fmt.Println(s) // "left foot, right foot", 变量s将因为+=语句持有一个新的字符串值
 	fmt.Println(t) // "left foot", t依然是包含原先的字符串值
-  s[0] = 'L' // compile error: cannot assign to s[0]
+  s[0] = 'L' // compile error: cannot assign to s[0]。因为尝试修改字符串内部数据的操作是被禁止的。
 }
 ```
 
@@ -165,6 +165,21 @@ func main() {
 在一个const声明语句中，在第一个声明的常量所在的行，iota将会被置为0，然后在每一个有常量声明的行加一。
 
 **练习 3.13：** 编写KB、MB的常量声明，然后扩展到YB。
+
+```go
+const (
+	B float64 = 1 << (iota * 10)
+	MB
+  GB
+  TB
+  PB
+  EB
+  ZB
+  YB
+)
+```
+
+
 
 ## Slice 内存复用
 
@@ -199,16 +214,6 @@ func nonempty2(strings []string) []string {
     }
     return out
 }
-```
-
-## 格式化符号%#v
-
-```go
-// Printf函数中%v参数包含的#副词，它表示用和Go语言类似的语法打印值。
-// 对于结构体类型来说，将包含每个成员的名字。
-fmt.Printf("%#v\n", w)
-// Output:
-// Wheel{Circle:Circle{Point:Point{X:42, Y:8}, Radius:5}, Spokes:20}
 ```
 
 ## JSON
@@ -290,9 +295,19 @@ func main() {
 
    - 重写了GoStringer接口的类型，当采用verb %#v格式化一个操作数时，会调用GoString方法来生成输出的文本。
 
+```go
+// Printf函数中%v参数包含的#副词，它表示用和Go语言类似的语法打印值。
+// 对于结构体类型来说，将包含每个成员的名字。
+fmt.Printf("%#v\n", w)
+// Output:
+// Wheel{Circle:Circle{Point:Point{X:42, Y:8}, Radius:5}, Spokes:20}
+```
+
+
+
 ## 避免内存拷贝
 
-**背景：** 因为Write方法需要传入一个byte切片而我们希望写入的值是一个字符串。
+**背景：** 因为Write方法需要传入一个byte切片，而我们希望写入的值是一个字符串。
 
 ```go
 // writeString writes s to w.
