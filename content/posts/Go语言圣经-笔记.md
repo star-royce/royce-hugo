@@ -12,7 +12,7 @@ categories:
 
 
 
-[Go 语言圣经][https://books.studygolang.com/gopl-zh/ch0/ch0-01.html] 拜读笔记
+[Go 语言圣经](https://books.studygolang.com/gopl-zh/ch0/ch0-01.html) 拜读笔记
 
 ## fmt 格式
 
